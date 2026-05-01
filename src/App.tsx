@@ -1,33 +1,26 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import confetti from 'canvas-confetti';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion';
 import {
   BedDouble,
-  Calendar,
   CarFront,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Flower2,
   Gem,
   Heart,
-  Mail,
   MapPin,
-  MessageSquare,
   Music,
   Shirt,
   Sparkles,
   SunMedium,
   User,
+  Users,
+  X,
 } from 'lucide-react';
 import './App.css';
-import {
-  fallbackContent,
-  getInvitationContent,
-  getStoredTeam,
-  getVoteSummary,
-  submitVote,
-  type Team,
-  type VoteSummary,
-} from './lib/invitation';
+import { fallbackContent, getInvitationContent } from './lib/invitation';
 
 interface CountdownState {
   days: number;
@@ -45,6 +38,14 @@ interface DetailCard {
   chips?: string[];
 }
 
+interface StorySlide {
+  id: string;
+  image: string;
+  stamp: string;
+  title: string;
+  caption: string;
+}
+
 const zeroCountdown: CountdownState = {
   days: 0,
   hours: 0,
@@ -52,47 +53,48 @@ const zeroCountdown: CountdownState = {
   seconds: 0,
 };
 
-const teamCopy: Record<Team, { title: string; line: string }> = {
-  bride: {
-    title: 'TEAM BRIDE SECURED',
-    line: 'NAKHRA FULL POWER!',
-  },
-  groom: {
-    title: 'TEAM GROOM SECURED',
-    line: 'BARAAT FULL POWER!',
-  },
-};
-
 const detailCards: DetailCard[] = [
   {
     title: 'Venue',
     icon: <MapPin className="h-5 w-5" />,
-    body: 'The Olive Conservatory, Jaipur. Garden ceremony followed by an indoor candlelit reception.',
+    body: 'The Olive Conservatory, Jaipur. Garden vows followed by a candlelit reception indoors.',
     actionLabel: 'Open Google Maps',
     actionHref: 'https://maps.google.com/?q=Jaipur',
   },
   {
     title: 'Dress Code',
     icon: <Shirt className="h-5 w-5" />,
-    body: 'Elegant Formal. Think rich silhouettes, polished tailoring, and soft metallic accents.',
+    body: 'Elegant formal with soft metallics, blush tones, and polished silhouettes.',
   },
   {
     title: 'Pre-Wedding Events',
     icon: <Sparkles className="h-5 w-5" />,
-    body: 'Join us for the celebrations before the main evening.',
+    body: 'Join the celebrations before the vows begin.',
     chips: ['Mehendi', 'Haldi', 'Sangeet'],
   },
   {
     title: 'Transportation',
     icon: <CarFront className="h-5 w-5" />,
-    body: 'Shuttle pickups will run from the host hotel every 30 minutes starting at 3:45 PM.',
+    body: 'Shuttles leave the host hotel every 30 minutes starting at 3:45 PM.',
   },
   {
     title: 'Accommodation',
     icon: <BedDouble className="h-5 w-5" />,
-    body: 'A room block is reserved nearby. Share your RSVP early so the team can hold your stay.',
+    body: 'A preferred room block is available nearby for close friends and family.',
   },
 ];
+
+const ambientPetals = [
+  { left: '6%', delay: '0s', duration: '14s' },
+  { left: '17%', delay: '2.2s', duration: '17s' },
+  { left: '29%', delay: '1.1s', duration: '15s' },
+  { left: '44%', delay: '3s', duration: '18s' },
+  { left: '58%', delay: '0.7s', duration: '16s' },
+  { left: '71%', delay: '2.7s', duration: '19s' },
+  { left: '84%', delay: '1.6s', duration: '15.5s' },
+];
+
+const eventOptions = ['Mehendi', 'Haldi', 'Sangeet', 'Wedding'];
 
 function getCountdown(targetDate: string): CountdownState {
   const distance = new Date(targetDate).getTime() - Date.now();
@@ -109,24 +111,6 @@ function getCountdown(targetDate: string): CountdownState {
   };
 }
 
-function getPercentages(votes: VoteSummary) {
-  const total = votes.bride + votes.groom;
-
-  if (total === 0) {
-    return {
-      bride: 50,
-      groom: 50,
-      total: 0,
-    };
-  }
-
-  return {
-    bride: Math.round((votes.bride / total) * 100),
-    groom: Math.round((votes.groom / total) * 100),
-    total,
-  };
-}
-
 function renderEventIcon(icon: 'mehendi' | 'haldi' | 'wedding') {
   switch (icon) {
     case 'mehendi':
@@ -137,26 +121,6 @@ function renderEventIcon(icon: 'mehendi' | 'haldi' | 'wedding') {
       return <Gem className="h-6 w-6 text-rose-300" />;
   }
 }
-
-const entranceSparkles = [
-  { left: '10%', top: '20%', delay: '0s', duration: '3.8s' },
-  { left: '24%', top: '12%', delay: '0.4s', duration: '4.4s' },
-  { left: '42%', top: '18%', delay: '0.9s', duration: '3.6s' },
-  { left: '66%', top: '14%', delay: '0.3s', duration: '4.8s' },
-  { left: '82%', top: '22%', delay: '1.1s', duration: '4.2s' },
-  { left: '16%', top: '36%', delay: '0.6s', duration: '3.9s' },
-  { left: '74%', top: '38%', delay: '1.4s', duration: '4.6s' },
-];
-
-const ambientPetals = [
-  { left: '6%', delay: '0s', duration: '14s' },
-  { left: '17%', delay: '2.2s', duration: '17s' },
-  { left: '29%', delay: '1.1s', duration: '15s' },
-  { left: '44%', delay: '3s', duration: '18s' },
-  { left: '58%', delay: '0.7s', duration: '16s' },
-  { left: '71%', delay: '2.7s', duration: '19s' },
-  { left: '84%', delay: '1.6s', duration: '15.5s' },
-];
 
 function playSoftNote(
   context: AudioContext,
@@ -185,13 +149,13 @@ function playSoftNote(
 
 function scheduleSoftPhrase(context: AudioContext, startTime: number) {
   const notes = [
-    { offset: 0, frequency: 293.66, duration: 1.8, volume: 0.03, type: 'sine' as const },
-    { offset: 0.35, frequency: 369.99, duration: 1.6, volume: 0.02, type: 'triangle' as const },
-    { offset: 0.85, frequency: 440, duration: 1.45, volume: 0.022, type: 'sine' as const },
-    { offset: 1.7, frequency: 493.88, duration: 1.35, volume: 0.018, type: 'triangle' as const },
-    { offset: 2.25, frequency: 440, duration: 1.7, volume: 0.024, type: 'sine' as const },
-    { offset: 2.9, frequency: 369.99, duration: 1.5, volume: 0.018, type: 'triangle' as const },
-    { offset: 3.55, frequency: 329.63, duration: 2, volume: 0.024, type: 'sine' as const },
+    { offset: 0, frequency: 293.66, duration: 1.8, volume: 0.028, type: 'sine' as const },
+    { offset: 0.35, frequency: 369.99, duration: 1.6, volume: 0.019, type: 'triangle' as const },
+    { offset: 0.85, frequency: 440, duration: 1.45, volume: 0.021, type: 'sine' as const },
+    { offset: 1.7, frequency: 493.88, duration: 1.35, volume: 0.017, type: 'triangle' as const },
+    { offset: 2.25, frequency: 440, duration: 1.7, volume: 0.023, type: 'sine' as const },
+    { offset: 2.9, frequency: 369.99, duration: 1.5, volume: 0.017, type: 'triangle' as const },
+    { offset: 3.55, frequency: 329.63, duration: 2, volume: 0.022, type: 'sine' as const },
   ];
 
   notes.forEach((note) => {
@@ -206,28 +170,202 @@ function scheduleSoftPhrase(context: AudioContext, startTime: number) {
   });
 }
 
+function fireCrackers() {
+  const duration = 2500;
+  const end = Date.now() + duration;
+
+  const frame = () => {
+    confetti({
+      particleCount: 5,
+      angle: 60,
+      spread: 55,
+      origin: { x: 0, y: 0.6 },
+      colors: ['#ffb703', '#fb8500', '#ffea00', '#ffffff'],
+      zIndex: 100
+    });
+    confetti({
+      particleCount: 5,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1, y: 0.6 },
+      colors: ['#ffb703', '#fb8500', '#ffea00', '#ffffff'],
+      zIndex: 100
+    });
+
+    if (Date.now() < end) {
+      requestAnimationFrame(frame);
+    }
+  };
+  frame();
+}
+
+function ScratchReveal({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isRevealed, setIsRevealed] = useState(false);
+  const drawingRef = useRef(false);
+  const scratchCountRef = useRef(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+
+    if (!canvas || !container) {
+      return;
+    }
+
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+      return;
+    }
+
+    const setup = () => {
+      const rect = container.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      context.globalCompositeOperation = 'source-over';
+      context.fillStyle = '#f3cf78';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = 'rgba(255,255,255,0.18)';
+      for (let i = 0; i < 120; i += 1) {
+        context.fillRect(
+          Math.random() * canvas.width,
+          Math.random() * canvas.height,
+          2 + Math.random() * 5,
+          2 + Math.random() * 5,
+        );
+      }
+      context.globalCompositeOperation = 'destination-out';
+      scratchCountRef.current = 0;
+      setIsRevealed(false);
+    };
+
+    setup();
+
+    const resizeObserver = new ResizeObserver(setup);
+    resizeObserver.observe(container);
+
+    return () => resizeObserver.disconnect();
+  }, [value]);
+
+  const scratch = (clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext('2d');
+
+    if (!canvas || !context) {
+      return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    context.beginPath();
+    context.arc(x, y, 26, 0, Math.PI * 2);
+    context.fill();
+
+    scratchCountRef.current += 1;
+
+    if (scratchCountRef.current % 6 !== 0) {
+      return;
+    }
+
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    let transparentPixels = 0;
+
+    for (let index = 3; index < pixels.length; index += 4) {
+      if (pixels[index] === 0) {
+        transparentPixels += 1;
+      }
+    }
+
+    if (!isRevealed && transparentPixels / (pixels.length / 4) > 0.70) {
+      setIsRevealed(true);
+      fireCrackers();
+    }
+  };
+
+  const stopScratching = (pointerId?: number) => {
+    drawingRef.current = false;
+
+    if (pointerId !== undefined) {
+      canvasRef.current?.releasePointerCapture(pointerId);
+    }
+  };
+
+  return (
+    <div className="scratch-panel">
+      <div className="section-heading">
+        <p className="section-eyebrow">Scratch to Reveal</p>
+        <h2>{label}</h2>
+      </div>
+
+      <div
+        ref={containerRef}
+        className={isRevealed ? 'scratch-card is-revealed' : 'scratch-card'}
+      >
+        <div className="scratch-card__content">
+          <span className="scratch-card__caption">Wedding Date</span>
+          <strong>{value}</strong>
+        </div>
+        <canvas
+          ref={canvasRef}
+          className="scratch-card__canvas"
+          onPointerDown={(event) => {
+            drawingRef.current = true;
+            event.currentTarget.setPointerCapture(event.pointerId);
+            scratch(event.clientX, event.clientY);
+          }}
+          onPointerMove={(event) => {
+            if (drawingRef.current) {
+              scratch(event.clientX, event.clientY);
+            }
+          }}
+          onPointerUp={(event) => {
+            stopScratching(event.pointerId);
+          }}
+          onPointerCancel={(event) => {
+            stopScratching(event.pointerId);
+          }}
+          onPointerLeave={() => {
+            if (drawingRef.current) {
+              drawingRef.current = false;
+            }
+          }}
+        />
+        {!isRevealed && <span className="scratch-card__hint">Scratch Here</span>}
+      </div>
+    </div>
+  );
+}
+
 function App() {
+  const { scrollY } = useScroll();
+  const yParallax = useTransform(scrollY, [0, 1000], [0, 150]);
   const timeoutRefs = useRef<number[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
   const musicLoopRef = useRef<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasEntered, setHasEntered] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
-  const [showEntranceCelebration, setShowEntranceCelebration] = useState(false);
   const [content, setContent] = useState(fallbackContent);
-  const [votes, setVotes] = useState<VoteSummary>({ bride: 0, groom: 0 });
   const [countdown, setCountdown] = useState<CountdownState>(
     getCountdown(fallbackContent.countdownTarget),
   );
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(() => getStoredTeam());
-  const [modalTeam, setModalTeam] = useState<Team | null>(null);
-  const [isSubmittingVote, setIsSubmittingVote] = useState(false);
-  const [attendance, setAttendance] = useState<'attending' | 'unable'>('attending');
+  const [storyIndex, setStoryIndex] = useState(0);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formValues, setFormValues] = useState({
     name: '',
-    email: '',
-    message: '',
+    guestCount: '1',
+    events: ['Wedding'],
   });
 
   useEffect(() => {
@@ -235,8 +373,6 @@ function App() {
       setContent(nextContent);
       setCountdown(getCountdown(nextContent.countdownTarget));
     });
-
-    void getVoteSummary().then(setVotes);
   }, []);
 
   useEffect(() => {
@@ -248,12 +384,22 @@ function App() {
   }, [content.countdownTarget]);
 
   useEffect(() => {
+    const storyTimer = window.setInterval(() => {
+      setStoryIndex((current) => (current + 1) % 3);
+    }, 4200);
+
+    return () => window.clearInterval(storyTimer);
+  }, []);
+
+  useEffect(() => {
     return () => {
       timeoutRefs.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
       timeoutRefs.current = [];
+
       if (musicLoopRef.current !== null) {
         window.clearInterval(musicLoopRef.current);
       }
+
       if (audioContextRef.current) {
         void audioContextRef.current.close();
         audioContextRef.current = null;
@@ -261,7 +407,35 @@ function App() {
     };
   }, []);
 
-  const percentages = getPercentages(votes);
+  const stories: StorySlide[] = useMemo(
+    () => [
+      {
+        id: 'story-1',
+        image: content.heroImage,
+        stamp: '12.12.26',
+        title: 'The First Look',
+        caption:
+          'Soft light, quiet nerves, and the first moment everything starts to feel real.',
+      },
+      {
+        id: 'story-2',
+        image: content.profiles[0]?.image ?? content.heroImage,
+        stamp: '13.12.26',
+        title: 'Her Chapter',
+        caption:
+          'Blush florals, warm laughter, and every detail carrying her signature grace.',
+      },
+      {
+        id: 'story-3',
+        image: content.profiles[1]?.image ?? content.heroImage,
+        stamp: '14.12.26',
+        title: 'Their Evening',
+        caption:
+          'A celebration of music, family, and the kind of joy that lingers long after midnight.',
+      },
+    ],
+    [content.heroImage, content.profiles],
+  );
 
   const toggleAudio = async () => {
     if (isPlaying) {
@@ -269,16 +443,16 @@ function App() {
         window.clearInterval(musicLoopRef.current);
         musicLoopRef.current = null;
       }
+
       if (audioContextRef.current) {
         await audioContextRef.current.suspend();
       }
+
       setIsPlaying(false);
       return;
     }
 
-    const audioContext =
-      audioContextRef.current ?? new window.AudioContext();
-
+    const audioContext = audioContextRef.current ?? new window.AudioContext();
     audioContextRef.current = audioContext;
 
     if (audioContext.state === 'suspended') {
@@ -295,92 +469,34 @@ function App() {
       if (!audioContextRef.current || audioContextRef.current.state !== 'running') {
         return;
       }
+
       scheduleSoftPhrase(audioContextRef.current, audioContextRef.current.currentTime + 0.05);
     }, 4200);
 
     setIsPlaying(true);
   };
 
-  const handleEnter = () => {
+  const handleEnter = async () => {
     if (isOpening) {
       return;
     }
 
     setIsOpening(true);
+    await toggleAudio().catch(() => undefined);
+
     const enterTimeout = window.setTimeout(() => {
       setHasEntered(true);
-      setShowEntranceCelebration(true);
-
       confetti({
-        particleCount: 90,
-        spread: 85,
+        particleCount: 95,
+        spread: 82,
         startVelocity: 30,
-        scalar: 0.95,
-        origin: { y: 0.62 },
-        colors: ['#fde68a', '#fcd34d', '#f9a8d4', '#fda4af'],
+        scalar: 0.9,
+        origin: { y: 0.58 },
+        colors: ['#f2a6ba', '#f3cf78', '#fff4cb'],
       });
-
-      const leftBurstTimeout = window.setTimeout(() => {
-        confetti({
-          particleCount: 65,
-          spread: 70,
-          startVelocity: 26,
-          scalar: 0.8,
-          origin: { x: 0.2, y: 0.44 },
-          colors: ['#fde68a', '#fff7cc', '#bfdbfe'],
-        });
-        confetti({
-          particleCount: 65,
-          spread: 70,
-          startVelocity: 26,
-          scalar: 0.8,
-          origin: { x: 0.8, y: 0.44 },
-          colors: ['#fde68a', '#fff7cc', '#fbcfe8'],
-        });
-      }, 220);
-
-      const hideCelebrationTimeout = window.setTimeout(() => {
-        setShowEntranceCelebration(false);
-      }, 2400);
-
-      timeoutRefs.current.push(leftBurstTimeout, hideCelebrationTimeout);
-    }, 950);
+    }, 850);
 
     timeoutRefs.current.push(enterTimeout);
-  };
-
-  const handleVote = async (team: Team) => {
-    if (selectedTeam || isSubmittingVote) {
-      return;
-    }
-
-    setModalTeam(team);
-    setIsSubmittingVote(true);
-
-    try {
-      const nextVotes = await submitVote(team);
-      setVotes(nextVotes);
-      setSelectedTeam(team);
-      confetti({
-        particleCount: 110,
-        spread: 75,
-        startVelocity: 32,
-        origin: { y: 0.58 },
-        colors:
-          team === 'bride'
-            ? ['#f9a8d4', '#fda4af', '#fde68a']
-            : ['#93c5fd', '#67e8f9', '#fde68a'],
-      });
-    } finally {
-      setIsSubmittingVote(false);
-    }
-  };
-
-  const handleInputChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    const { name, value } = event.target;
-    setFormValues((current) => ({ ...current, [name]: value }));
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -388,15 +504,12 @@ function App() {
     setIsSubmitted(true);
 
     confetti({
-      particleCount: 90,
-      spread: 70,
-      startVelocity: 26,
-      scalar: 0.85,
-      origin: { y: 0.5 },
-      colors:
-        attendance === 'attending'
-          ? ['#d4af37', '#f6e7a7', '#c7f1d6']
-          : ['#d4af37', '#f6e7a7'],
+      particleCount: 120,
+      spread: 76,
+      startVelocity: 28,
+      scalar: 0.9,
+      origin: { y: 0.45 },
+      colors: ['#f2a6ba', '#f7d98f', '#fff1ca'],
     });
   };
 
@@ -407,70 +520,73 @@ function App() {
           <motion.div
             key="intro"
             className="gate-intro"
-            exit={{ opacity: 0, transition: { duration: 0.2, delay: 0.72 } }}
+            exit={{ opacity: 0, transition: { duration: 0.2, delay: 0.7 } }}
           >
             <div className={`gate-frame ${isOpening ? 'gate-frame--opening' : ''}`}>
+              <div className="gate-frame__backdrop">
+                <img
+                  src={content.heroImage}
+                  alt="Wedding invitation cover"
+                  className="gate-frame__image"
+                />
+                <div className="gate-frame__overlay" />
+              </div>
               <div className="gate-panel gate-panel--left" />
               <div className="gate-panel gate-panel--right" />
 
               <motion.div
-                initial={{ opacity: 0, y: 24 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7 }}
+                transition={{ duration: 0.75 }}
                 className="intro-content"
               >
-                <p className="intro-eyebrow">Wedding Invitation</p>
-                <h1 className="intro-title">Open The Celebration</h1>
-                <p className="intro-copy">
-                  Tap the seal to reveal the celebration for Vaishnavi and Yash.
-                </p>
-
-                <motion.button
-                  type="button"
-                  onClick={handleEnter}
-                  className="seal-button"
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
-                  animate={
-                    isOpening
-                      ? { scale: [1, 1.08, 14], opacity: [1, 1, 0] }
-                      : { scale: [1, 1.03, 1] }
-                  }
-                  transition={
-                    isOpening
-                      ? { duration: 0.95, ease: 'easeInOut' }
-                      : { duration: 2.4, repeat: Number.POSITIVE_INFINITY }
-                  }
-                >
-                  <span className="seal-button__outer" />
-                  <span className="seal-button__inner">
-                    <Heart className="h-8 w-8 fill-current" strokeWidth={1.5} />
-                  </span>
-                </motion.button>
+                <p className="intro-eyebrow" style={{ color: '#fff' }}>For The Celebration</p>
+                <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <h1 className="hero-title" style={{ color: '#fff', marginBottom: '3rem', textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
+                    Vaishnavi &amp; Yash
+                  </h1>
+                  
+                  <motion.button
+                    type="button"
+                    onClick={handleEnter}
+                    className="seal-button"
+                    style={{ position: 'relative', left: 'auto', bottom: 'auto', transform: 'none' }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.96 }}
+                    animate={
+                      isOpening
+                        ? { scale: [1, 1.08, 12], opacity: [1, 1, 0] }
+                        : { rotate: [0, 3, -3, 0] }
+                    }
+                    transition={
+                      isOpening
+                        ? { duration: 0.82, ease: 'easeInOut' }
+                        : { duration: 4, repeat: Number.POSITIVE_INFINITY }
+                    }
+                  >
+                    <span className="seal-button__outer" />
+                    <span className="seal-button__inner">
+                      <Heart className="h-8 w-8 fill-current" strokeWidth={1.5} />
+                    </span>
+                  </motion.button>
+                  <p style={{ marginTop: '1.5rem', color: '#fff', fontSize: '0.8rem', letterSpacing: '0.15em', textTransform: 'uppercase' }}>Tap to enter</p>
+                </div>
               </motion.div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      <div className="hero-backdrop">
-        <img
-          src={content.heroImage}
-          alt="Couple Background"
-          className="hero-backdrop__image"
+      <button type="button" onClick={() => void toggleAudio()} className="music-button">
+        <Music
+          className={`h-5 w-5 ${isPlaying ? 'animate-pulse music-button__icon--active' : 'music-button__icon'}`}
         />
-        <div className="hero-backdrop__overlay" />
-      </div>
-
-      <button type="button" onClick={toggleAudio} className="music-button">
-        <Music className={`h-5 w-5 ${isPlaying ? 'animate-pulse music-button__icon--active' : 'music-button__icon'}`} />
       </button>
 
-      <motion.div
+      <motion.main
         className="main-content"
         initial={{ opacity: 0 }}
         animate={{ opacity: hasEntered ? 1 : 0 }}
-        transition={{ duration: 0.7, delay: hasEntered ? 0.15 : 0 }}
+        transition={{ duration: 0.72, delay: hasEntered ? 0.14 : 0 }}
       >
         <div className="ambient-petals" aria-hidden="true">
           {ambientPetals.map((petal, index) => (
@@ -486,54 +602,24 @@ function App() {
           ))}
         </div>
 
-        <AnimatePresence>
-          {showEntranceCelebration && (
-            <motion.div
-              className="entrance-celebration"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <motion.div
-                className="entrance-celebration__glow"
-                initial={{ scale: 0.75, opacity: 0 }}
-                animate={{ scale: 1.2, opacity: 1 }}
-                exit={{ scale: 1.35, opacity: 0 }}
-                transition={{ duration: 1.2, ease: 'easeOut' }}
-              />
-              <motion.div
-                className="entrance-celebration__headline"
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.45, delay: 0.18 }}
-              >
-                <p>Doors Open</p>
-                <span>The celebration begins</span>
-              </motion.div>
-              {entranceSparkles.map((sparkle, index) => (
-                <span
-                  key={`${sparkle.left}-${sparkle.top}-${index}`}
-                  className="entrance-celebration__spark"
-                  style={{
-                    left: sparkle.left,
-                    top: sparkle.top,
-                    animationDelay: sparkle.delay,
-                    animationDuration: sparkle.duration,
-                  }}
-                />
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         <section className="hero-section">
-          <div className="hero-section__halo" aria-hidden="true" />
+          <motion.div 
+            className="hero-image-container"
+            initial={{ opacity: 0, y: 80, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 50, damping: 20, duration: 1.5 }}
+          >
+            <motion.img
+              src={content.heroImage}
+              alt="Couple portrait"
+              style={{ y: yParallax }}
+            />
+            <div className="hero-image-overlay" />
+          </motion.div>
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: hasEntered ? 1 : 0, y: hasEntered ? 0 : 30 }}
-            transition={{ duration: 0.9 }}
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: hasEntered ? 1 : 0, y: hasEntered ? 0 : 40 }}
+            transition={{ type: 'spring', stiffness: 100, damping: 20, mass: 1 }}
             className="hero-section__intro"
           >
             <div className="hero-ornament">
@@ -554,9 +640,19 @@ function App() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: hasEntered ? 1 : 0 }}
-            transition={{ delay: 0.45, duration: 0.9 }}
+            className="hero-story"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: hasEntered ? 1 : 0, y: hasEntered ? 0 : 20 }}
+            transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.2 }}
+          >
+            <Sparkles className="h-4 w-4" />
+            <p>{content.story}</p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: hasEntered ? 1 : 0, scale: hasEntered ? 1 : 0.95 }}
+            transition={{ type: 'spring', stiffness: 100, damping: 20, delay: 0.35 }}
             className="countdown-grid"
           >
             {[
@@ -569,7 +665,6 @@ function App() {
                 key={item.label}
                 className="countdown-card"
                 whileHover={{ y: -4, scale: 1.02 }}
-                transition={{ duration: 0.2 }}
               >
                 <span className="countdown-card__value">
                   {item.value.toString().padStart(2, '0')}
@@ -579,149 +674,127 @@ function App() {
             ))}
           </motion.div>
 
-          <motion.div
-            className="hero-story"
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: hasEntered ? 1 : 0, y: hasEntered ? 0 : 18 }}
-            transition={{ delay: 0.62, duration: 0.75 }}
-          >
-            <Sparkles className="h-4 w-4" />
-            <p>{content.story}</p>
-          </motion.div>
-
           <p className="hero-venue">{content.venueLine}</p>
         </section>
 
         <section className="content-section">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="section-title"
-          >
-            Celebration Poll
-          </motion.h2>
-          <p className="section-copy">
-            Pick a side, trigger the celebration screen, and track the live split.
-          </p>
-
-          <div className="vote-grid">
-            <motion.button
-              whileHover={{ scale: selectedTeam ? 1 : 1.02 }}
-              whileTap={{ scale: selectedTeam ? 1 : 0.98 }}
-              onClick={() => void handleVote('bride')}
-              disabled={Boolean(selectedTeam)}
-                className="vote-card vote-card--bride"
-              >
-              <div className="vote-card__inner">
-                <Heart className="vote-card__icon vote-card__icon--bride" />
-                <span className="mb-1 font-serif text-lg">Team Bride</span>
-                <span className="vote-card__count vote-card__count--bride">{votes.bride}</span>
-                <span className="vote-card__percent">
-                  {percentages.bride}%
-                </span>
-              </div>
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: selectedTeam ? 1 : 1.02 }}
-              whileTap={{ scale: selectedTeam ? 1 : 0.98 }}
-              onClick={() => void handleVote('groom')}
-              disabled={Boolean(selectedTeam)}
-                className="vote-card vote-card--groom"
-              >
-              <div className="vote-card__inner">
-                <Heart className="vote-card__icon vote-card__icon--groom" />
-                <span className="mb-1 font-serif text-lg">Team Groom</span>
-                <span className="vote-card__count vote-card__count--groom">{votes.groom}</span>
-                <span className="vote-card__percent">
-                  {percentages.groom}%
-                </span>
-              </div>
-            </motion.button>
-          </div>
-
-          <div className="vote-meter">
-            <div className="vote-meter__track">
-              <div
-                className="vote-meter__fill vote-meter__fill--bride"
-                style={{ width: `${percentages.bride}%` }}
-              />
-            </div>
-            <div className="vote-meter__track">
-              <div
-                className="vote-meter__fill vote-meter__fill--groom"
-                style={{ width: `${percentages.groom}%` }}
-              />
-            </div>
-          </div>
-
-          <p className="section-footnote">
-            {selectedTeam
-              ? `Your vote is locked with Team ${selectedTeam === 'bride' ? 'Bride' : 'Groom'}.`
-              : `Votes recorded: ${percentages.total}. Set VITE_API_BASE_URL to connect this to your Node/Mongo backend.`}
-          </p>
+          <ScratchReveal label="Wedding Date" value="December 14, 2026" />
         </section>
 
         <section className="content-section">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="section-title section-title--spaced"
-          >
-            Meet the Couple
-          </motion.h2>
+          <div className="section-heading">
+            <p className="section-eyebrow">Story Timeline</p>
+            <h2>Moments In Motion</h2>
+          </div>
 
-          <div className="profile-stack">
-            {content.profiles.map((profile, index) => (
-              <motion.div
-                key={profile.id}
-                initial={{ opacity: 0, x: index === 0 ? -20 : 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -6 }}
-                transition={{ duration: 0.28 }}
-                className="profile-card"
+          <div className="story-slider">
+            <div className="story-slider__progress">
+              {stories.map((story, index) => (
+                <span
+                  key={story.id}
+                  className={index === storyIndex ? 'is-active' : ''}
+                />
+              ))}
+            </div>
+
+            <div className="story-slider__media">
+              <img src={stories[storyIndex].image} alt={stories[storyIndex].title} />
+              <div className="story-slider__grain" />
+              <span className="story-slider__stamp">{stories[storyIndex].stamp}</span>
+              <button
+                type="button"
+                className="story-slider__arrow story-slider__arrow--left"
+                onClick={() =>
+                  setStoryIndex((current) => (current - 1 + stories.length) % stories.length)
+                }
+                aria-label="Previous story"
               >
-                <div className="profile-card__image">
-                  <img
-                    src={profile.image}
-                    alt={profile.name}
-                    className="h-full w-full object-cover"
-                  />
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                className="story-slider__arrow story-slider__arrow--right"
+                onClick={() => setStoryIndex((current) => (current + 1) % stories.length)}
+                aria-label="Next story"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+
+            <motion.div
+              key={stories[storyIndex].id}
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.45 }}
+              className="story-slider__copy"
+            >
+              <p className="story-slider__kicker">Insta-Style Story</p>
+              <h3>{stories[storyIndex].title}</h3>
+              <p>{stories[storyIndex].caption}</p>
+            </motion.div>
+          </div>
+        </section>
+
+        <section className="content-section">
+          <div className="section-heading">
+            <p className="section-eyebrow">Timeline</p>
+            <h2>The Wedding Flow</h2>
+          </div>
+
+          <div className="timeline-list">
+            {content.events.map((event, index) => (
+              <motion.article
+                key={event.id}
+                className="timeline-card"
+                initial={{ opacity: 0, x: -14 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.42, delay: index * 0.06 }}
+              >
+                <div className="timeline-card__rail">
+                  <span className="timeline-card__dot" />
+                  {index !== content.events.length - 1 && <span className="timeline-card__line" />}
                 </div>
-                <p className="profile-card__role">{profile.role}</p>
-                <h3 className="profile-card__name">{profile.name}</h3>
-                <p className="profile-card__bio">{profile.bio}</p>
-              </motion.div>
+                <div className="timeline-card__body">
+                  <div className="timeline-card__icon">{renderEventIcon(event.icon)}</div>
+                  <div className="timeline-card__content">
+                    <p className="timeline-card__date">{event.dateLabel}</p>
+                    <h3>{event.title}</h3>
+                    <p>{event.blurb}</p>
+                    <div className="timeline-card__meta">
+                      <span>
+                        <Clock3 className="h-4 w-4" />
+                        {event.timeLabel}
+                      </span>
+                      <span>
+                        <MapPin className="h-4 w-4" />
+                        {event.location}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </motion.article>
             ))}
           </div>
         </section>
 
         <section className="content-section">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="section-title"
-          >
-            Details
-          </motion.h2>
-          <p className="section-copy">
-            Everything guests need before the celebration begins.
-          </p>
+          <div className="section-heading">
+            <p className="section-eyebrow">Details</p>
+            <h2>Everything Guests Need</h2>
+          </div>
 
           <div className="details-grid">
             {detailCards.map((card, index) => (
               <motion.article
                 key={card.title}
                 className="detail-card"
-                initial={{ opacity: 0, y: 22 }}
+                initial={{ opacity: 0, y: 18 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.45, delay: index * 0.05 }}
-                whileHover={{ y: -5 }}
+                viewport={{ once: true, amount: 0.25 }}
+                transition={{ duration: 0.42, delay: index * 0.05 }}
+                whileHover={{ y: -4 }}
               >
                 <div className="detail-card__icon">{card.icon}</div>
                 <h3>{card.title}</h3>
@@ -750,255 +823,143 @@ function App() {
           </div>
         </section>
 
-        <section className="content-section content-section--timeline">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="section-title"
-          >
-            Wedding Itinerary
-          </motion.h2>
-          <p className="section-copy">
-            Dress code, timing, and venue links stacked cleanly for mobile guests.
-          </p>
+        <section className="content-section content-section--last">
+          <div className="section-heading">
+            <p className="section-eyebrow">RSVP</p>
+            <h2>Ready To Celebrate?</h2>
+          </div>
 
-          <div className="chat-shell">
-            <div className="chat-shell__header">
-              <div className="chat-shell__dot-group">
-                <span />
-                <span />
-                <span />
-              </div>
-              <div>
-                <p>Wedding Concierge</p>
-                <span>Online now</span>
-              </div>
-            </div>
-
-            <div className="space-y-6 pt-3">
-              {content.events.map((event, index) => (
-                <motion.article
-                  key={event.id}
-                  initial={{ opacity: 0, y: 40, scale: 0.96 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: true, margin: '-40px' }}
-                  transition={{ duration: 0.55, delay: index * 0.08 }}
-                  whileHover={{ y: -4 }}
-                  className={`chat-row ${index % 2 === 0 ? 'chat-row--left' : 'chat-row--right'}`}
-                >
-                  <div
-                    className={`chat-avatar ${index % 2 === 0 ? 'chat-avatar--left' : 'chat-avatar--right'}`}
-                  >
-                    {renderEventIcon(event.icon)}
-                  </div>
-
-                  <div
-                    className={`chat-bubble ${index % 2 === 0 ? 'chat-bubble--left' : 'chat-bubble--right'}`}
-                  >
-                    <p className="chat-bubble__date">
-                      {event.dateLabel}
-                    </p>
-                    <h3 className="chat-bubble__title">{event.title}</h3>
-                    <p className="chat-bubble__copy">{event.blurb}</p>
-
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      <div className="chat-detail-chip">
-                        <p className="chat-detail-chip__label">
-                          Dress Code
-                        </p>
-                        <p className="chat-detail-chip__value">{event.dressCode}</p>
-                      </div>
-
-                      <div className="chat-detail-chip">
-                        <p className="chat-detail-chip__label">
-                          Location
-                        </p>
-                        <p className="chat-detail-chip__value">{event.location}</p>
-                      </div>
-                    </div>
-
-                    <div className="chat-bubble__meta">
-                      <div className="chat-bubble__meta-row">
-                        <Clock3 className="h-4 w-4 chat-bubble__meta-icon" />
-                        <span>{event.timeLabel}</span>
-                      </div>
-                      <div className="chat-bubble__meta-row">
-                        <Calendar className="h-4 w-4 chat-bubble__meta-icon" />
-                        <span>{event.dateLabel}</span>
-                      </div>
-                      <div className="chat-bubble__meta-row">
-                        <MapPin className="h-4 w-4 chat-bubble__meta-icon" />
-                        <span>{event.location}</span>
-                      </div>
-                    </div>
-
-                    <a
-                      href={event.mapUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="chat-bubble__button"
-                    >
-                      View Location
-                    </a>
-                  </div>
-                </motion.article>
-              ))}
-            </div>
+          <div className="floating-rsvp">
+            <button type="button" className="floating-rsvp__button" onClick={() => setIsDrawerOpen(true)}>
+              Open RSVP
+            </button>
           </div>
         </section>
 
-        <section className="content-section content-section--last">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="section-title"
-          >
-            RSVP
-          </motion.h2>
-          <p className="section-copy">Let the couple know if you&apos;ll be there.</p>
-
-          <motion.form
-            className="rsvp-form"
-            onSubmit={handleSubmit}
-            whileInView={{ opacity: 1, y: 0 }}
-            initial={{ opacity: 0, y: 18 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.45 }}
-          >
-            <label className="form-field">
-              <span>Name</span>
-              <div className="form-field__input">
-                <User className="h-4 w-4" />
-                <input
-                  type="text"
-                  name="name"
-                  value={formValues.name}
-                  onChange={handleInputChange}
-                  placeholder="Your full name"
-                  required
-                />
-              </div>
-            </label>
-
-            <label className="form-field">
-              <span>Email</span>
-              <div className="form-field__input">
-                <Mail className="h-4 w-4" />
-                <input
-                  type="email"
-                  name="email"
-                  value={formValues.email}
-                  onChange={handleInputChange}
-                  placeholder="name@example.com"
-                  required
-                />
-              </div>
-            </label>
-
-            <div className="form-field">
-              <span>Attendance</span>
-              <div className="attendance-toggle">
-                <button
-                  type="button"
-                  className={
-                    attendance === 'attending'
-                      ? 'attendance-toggle__button is-active'
-                      : 'attendance-toggle__button'
-                  }
-                  onClick={() => setAttendance('attending')}
-                >
-                  Joyfully Attending
-                </button>
-                <button
-                  type="button"
-                  className={
-                    attendance === 'unable'
-                      ? 'attendance-toggle__button is-active'
-                      : 'attendance-toggle__button'
-                  }
-                  onClick={() => setAttendance('unable')}
-                >
-                  Unable to Attend
-                </button>
-              </div>
-            </div>
-
-            <label className="form-field">
-              <span>Message</span>
-              <div className="form-field__input form-field__input--textarea">
-                <MessageSquare className="h-4 w-4" />
-                <textarea
-                  name="message"
-                  value={formValues.message}
-                  onChange={handleInputChange}
-                  rows={4}
-                  placeholder="Share a note for the couple"
-                />
-              </div>
-            </label>
-
-            <button type="submit" className="rsvp-submit">
-              Send RSVP
-            </button>
-
-            {isSubmitted && (
-              <p className="rsvp-success">
-                RSVP captured for {formValues.name || 'your guest entry'}.
-              </p>
-            )}
-          </motion.form>
-        </section>
-
         <footer className="footer-block">
-          <p className="footer-block__line">
-            We can&apos;t wait to celebrate with you.
-          </p>
+          <p className="footer-block__line">A little romance, a lot of celebration.</p>
           <p>Vaishnavi &amp; Yash / 2026</p>
         </footer>
-      </motion.div>
+      </motion.main>
 
       <AnimatePresence>
-        {modalTeam && (
+        {isDrawerOpen && (
           <motion.div
-            className="celebration-overlay"
+            className="drawer-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setModalTeam(null)}
+            onClick={() => setIsDrawerOpen(false)}
           >
-            <motion.div
-              className={`celebration-card ${modalTeam === 'bride' ? 'celebration-card--bride' : 'celebration-card--groom'}`}
-              initial={{ opacity: 0, scale: 0.92, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.28 }}
+            <motion.aside
+              className="rsvp-drawer"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', stiffness: 260, damping: 26 }}
               onClick={(event) => event.stopPropagation()}
             >
-              <p className="celebration-card__eyebrow">
-                Celebration Locked
-              </p>
-              <h3 className="celebration-card__title">
-                {teamCopy[modalTeam].title}
-              </h3>
-              <p className="celebration-card__line">
-                {teamCopy[modalTeam].line}
-              </p>
-              <p className="celebration-card__copy">
-                {isSubmittingVote
-                  ? 'Recording your vote...'
-                  : `${votes[modalTeam]} guests are backing this side right now.`}
-              </p>
+              <div className="rsvp-drawer__header">
+                <div>
+                  <p className="section-eyebrow">RSVP Drawer</p>
+                  <h3>Confirm Your Presence</h3>
+                </div>
+                <button
+                  type="button"
+                  className="rsvp-drawer__close"
+                  onClick={() => setIsDrawerOpen(false)}
+                  aria-label="Close RSVP drawer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setModalTeam(null)}
-                className="celebration-card__close"
-              >
-                Close
-              </button>
-            </motion.div>
+              <form className="rsvp-form" onSubmit={handleSubmit}>
+                <label className="form-field">
+                  <span>Name</span>
+                  <div className="form-field__input">
+                    <User className="h-4 w-4" />
+                    <input
+                      type="text"
+                      value={formValues.name}
+                      onChange={(event) =>
+                        setFormValues((current) => ({ ...current, name: event.target.value }))
+                      }
+                      placeholder="Your full name"
+                      required
+                    />
+                  </div>
+                </label>
+
+                <label className="form-field">
+                  <span>Guest Count</span>
+                  <div className="form-field__input">
+                    <Users className="h-4 w-4" />
+                    <input
+                      type="number"
+                      min="1"
+                      max="6"
+                      value={formValues.guestCount}
+                      onChange={(event) =>
+                        setFormValues((current) => ({ ...current, guestCount: event.target.value }))
+                      }
+                      required
+                    />
+                  </div>
+                </label>
+
+                <div className="form-field">
+                  <span>Events</span>
+                  <div className="event-checkboxes">
+                    {eventOptions.map((option) => {
+                      const checked = formValues.events.includes(option);
+                      return (
+                        <label key={option} className={checked ? 'event-checkbox is-active' : 'event-checkbox'}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              setFormValues((current) => ({
+                                ...current,
+                                events: checked
+                                  ? current.events.filter((item) => item !== option)
+                                  : [...current.events, option],
+                              }))
+                            }
+                          />
+                          <span>{option}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <button type="submit" className="rsvp-submit">
+                  Confirm
+                </button>
+
+                <AnimatePresence>
+                  {isSubmitted && (
+                    <motion.div
+                      className="confetti-lottie"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                    >
+                      <div className="confetti-lottie__burst">
+                        <span />
+                        <span />
+                        <span />
+                        <span />
+                        <span />
+                        <span />
+                      </div>
+                      <p>RSVP captured beautifully.</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </form>
+            </motion.aside>
           </motion.div>
         )}
       </AnimatePresence>

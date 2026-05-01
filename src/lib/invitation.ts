@@ -49,8 +49,7 @@ export const fallbackContent: InvitationContent = {
   subtitle: 'Request the honor of your presence as they begin forever together.',
   countdownTarget: '2026-12-14T19:00:00+05:30',
   venueLine: 'Wedding vows on December 14, 2026 at The Marigold Estate, Jaipur',
-  heroImage:
-    'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80',
+  heroImage: '/hero.png',
   story:
     'Two loud laughers, one endless conversation, and a celebration stitched with family, color, and full-volume joy.',
   profiles: [
@@ -59,16 +58,14 @@ export const fallbackContent: InvitationContent = {
       name: 'Vaishnavi',
       role: 'The bride',
       bio: 'Equal parts grace and chaos, she brings the sparkle, the plans, and the last word.',
-      image:
-        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80',
+      image: '/bride.png',
     },
     {
       id: 'groom',
       name: 'Yash',
       role: 'The groom',
       bio: 'Calm under pressure, sharp with one-liners, and very ready for a baraat that ignores all timelines.',
-      image:
-        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80',
+      image: '/groom.png',
     },
   ],
   events: [
