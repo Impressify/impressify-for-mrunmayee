@@ -94,6 +94,56 @@ const ambientPetals = [
   { left: '84%', delay: '1.6s', duration: '15.5s' },
 ];
 
+const butterfliesData = [
+  { id: 1, color: '#f3cf78', delay: 0, duration: 14, startX: '15%', startY: '-10%', scale: 0.8 },
+  { id: 2, color: '#8ab4f8', delay: 4, duration: 17, startX: '75%', startY: '-5%', scale: 1 },
+  { id: 3, color: '#ffcf54', delay: 8, duration: 19, startX: '40%', startY: '-15%', scale: 0.7 },
+  { id: 4, color: '#5c9ce6', delay: 12, duration: 15, startX: '85%', startY: '-10%', scale: 0.9 },
+  { id: 5, color: '#f3cf78', delay: 16, duration: 18, startX: '25%', startY: '-5%', scale: 1.1 },
+];
+
+function Butterfly({ color, delay, duration, startX, startY, scale }: any) {
+  return (
+    <motion.div
+      style={{
+        position: 'fixed',
+        left: startX,
+        bottom: startY,
+        pointerEvents: 'none',
+        zIndex: 50,
+      }}
+      initial={{ opacity: 0, x: 0, y: 0, scale }}
+      animate={{
+        opacity: [0, 1, 1, 0],
+        x: [0, 60, -30, 80, 20],
+        y: [0, -250, -500, -750, -1000],
+        rotate: [-10, 15, -20, 10, -5],
+      }}
+      transition={{
+        duration,
+        delay,
+        repeat: Number.POSITIVE_INFINITY,
+        ease: 'linear',
+      }}
+    >
+      <motion.div
+        animate={{ scaleX: [1, 0.4, 1] }}
+        transition={{ duration: 0.4, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }}
+      >
+        <svg
+          width="28"
+          height="24"
+          viewBox="0 0 28 24"
+          fill={color}
+          style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.15))' }}
+        >
+          <path d="M14 12C14 12 8 2 4 4C0 6 2 12 6 13C10 14 14 12 14 12ZM14 12C14 12 20 2 24 4C28 6 26 12 22 13C18 14 14 12 14 12ZM14 12C14 12 10 22 6 20C2 18 4 13 8 13C12 13 14 12 14 12ZM14 12C14 12 18 22 22 20C26 18 24 13 20 13C16 13 14 12 14 12Z" />
+        </svg>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 const eventOptions = ['Mehendi', 'Haldi', 'Sangeet', 'Wedding'];
 
 function getCountdown(targetDate: string): CountdownState {
@@ -211,6 +261,7 @@ function ScratchReveal({
   const [isRevealed, setIsRevealed] = useState(false);
   const drawingRef = useRef(false);
   const scratchCountRef = useRef(0);
+  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -267,9 +318,21 @@ function ScratchReveal({
     const x = clientX - rect.left;
     const y = clientY - rect.top;
 
-    context.beginPath();
-    context.arc(x, y, 26, 0, Math.PI * 2);
-    context.fill();
+    if (lastPosRef.current) {
+      context.lineWidth = 52;
+      context.lineCap = 'round';
+      context.lineJoin = 'round';
+      context.beginPath();
+      context.moveTo(lastPosRef.current.x, lastPosRef.current.y);
+      context.lineTo(x, y);
+      context.stroke();
+    } else {
+      context.beginPath();
+      context.arc(x, y, 26, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    lastPosRef.current = { x, y };
 
     scratchCountRef.current += 1;
 
@@ -294,6 +357,7 @@ function ScratchReveal({
 
   const stopScratching = (pointerId?: number) => {
     drawingRef.current = false;
+    lastPosRef.current = null;
 
     if (pointerId !== undefined) {
       canvasRef.current?.releasePointerCapture(pointerId);
@@ -311,6 +375,7 @@ function ScratchReveal({
         ref={containerRef}
         className={isRevealed ? 'scratch-card is-revealed' : 'scratch-card'}
       >
+        {!isRevealed && <span className="scratch-card__hint">Scratch Here</span>}
         <div className="scratch-card__content">
           <span className="scratch-card__caption">Wedding Date</span>
           <strong>{value}</strong>
@@ -336,11 +401,10 @@ function ScratchReveal({
           }}
           onPointerLeave={() => {
             if (drawingRef.current) {
-              drawingRef.current = false;
+              stopScratching();
             }
           }}
         />
-        {!isRevealed && <span className="scratch-card__hint">Scratch Here</span>}
       </div>
     </div>
   );
@@ -581,6 +645,10 @@ function App() {
           className={`h-5 w-5 ${isPlaying ? 'animate-pulse music-button__icon--active' : 'music-button__icon'}`}
         />
       </button>
+
+      {hasEntered && butterfliesData.map((butterfly) => (
+        <Butterfly key={butterfly.id} {...butterfly} />
+      ))}
 
       <motion.main
         className="main-content"
